@@ -66,8 +66,19 @@ func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
 }
 
 func (router *Router) handleSites(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("content-type", "application.json")
-	w.WriteHeader(http.StatusOK)
+
+	w.Header().Add("content-type", "application/json")
+	searchTerm := r.URL.Query().Get("term")
+
+	if len(searchTerm) < 3 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(struct{ Message string }{Message: "3 or more characters needed for search"})
+		return
+	}
+
+	matchingSites, _ := router.slClient.GetSites(searchTerm)
+	json.NewEncoder(w).Encode(matchingSites)
+
 }
 
 func parseSiteIdFromUrl(url string) (int, error) {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -10,9 +9,7 @@ import (
 )
 
 func main() {
-	fmt.Println("SL Time Table server!")
 
-	// move to a server
 	port := ":3000"
 
 	slClient := sl_api.NewDefaultSLApi()

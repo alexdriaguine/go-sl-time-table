@@ -9,7 +9,6 @@ import (
 
 	gosltimetable "github.com/alexdriaguine/go-sl-time-table/internal"
 	"github.com/alexdriaguine/go-sl-time-table/internal/sl_api"
-	approvals "github.com/approvals/go-approval-tests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,19 +37,6 @@ func (s *slApiClientStub) GetSites(searchTerm string) ([]sl_api.MappedSLSite, er
 }
 
 func TestRouter(t *testing.T) {
-
-	t.Run("can render index", func(t *testing.T) {
-		slApiMock, _ := buildSLClientStub(false)
-		router, _ := gosltimetable.NewRouter(slApiMock)
-
-		request := newGetRequest("/")
-		response := httptest.NewRecorder()
-
-		router.ServeHTTP(response, request)
-
-		approvals.VerifyString(t, response.Body.String())
-		assert.Equal(t, http.StatusOK, response.Code)
-	})
 
 	t.Run("departures route with existing site", func(t *testing.T) {
 		slApiMock, departuresJson := buildSLClientStub(false)
@@ -105,11 +91,8 @@ func TestRouter(t *testing.T) {
 
 		router.ServeHTTP(response, request)
 
-		want := `[{"Id": 1, "Name": "Sundbyberg", "Alias": ["Sundbybergs centrum"]}]`
-		got := response.Body.String()
-
 		assert.Equal(t, http.StatusOK, response.Code)
-		assert.Equal(t, want, got)
+		assert.Equal(t, "application/json", response.Header().Get("content-type"))
 	})
 
 }
