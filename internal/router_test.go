@@ -1,0 +1,127 @@
+package gosltimetable_test
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	gosltimetable "github.com/alexdriaguine/go-sl-time-table/internal"
+	"github.com/alexdriaguine/go-sl-time-table/internal/sl_api"
+	approvals "github.com/approvals/go-approval-tests"
+	"github.com/stretchr/testify/assert"
+)
+
+var (
+	siteIdExists = 1337
+)
+
+type slApiClientStub struct {
+	departures []sl_api.MappedSLDeparture
+	err        error
+}
+
+func (s *slApiClientStub) GetDepartures(siteid int) ([]sl_api.MappedSLDeparture, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if siteid == siteIdExists {
+		return s.departures, nil
+	}
+	return []sl_api.MappedSLDeparture{}, nil
+}
+
+func TestRouter(t *testing.T) {
+
+	t.Run("can render index", func(t *testing.T) {
+		slApiMock, _ := buildSLClientStub(false)
+		router, _ := gosltimetable.NewRouter(slApiMock)
+
+		request := newGetRequest("/")
+		response := httptest.NewRecorder()
+
+		router.ServeHTTP(response, request)
+
+		approvals.VerifyString(t, response.Body.String())
+		assert.Equal(t, http.StatusOK, response.Code)
+	})
+
+	t.Run("departures route with existing site", func(t *testing.T) {
+		slApiMock, departuresJson := buildSLClientStub(false)
+		router, _ := gosltimetable.NewRouter(slApiMock)
+
+		request := newGetRequest(fmt.Sprintf("/departures/%d", siteIdExists))
+		response := httptest.NewRecorder()
+
+		router.ServeHTTP(response, request)
+
+		want := departuresJson
+		got := response.Body.String()
+
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.JSONEq(t, got, string(want))
+	})
+
+	t.Run("departures with unkown siteId returns empty array", func(t *testing.T) {
+		slApiMock, _ := buildSLClientStub(false)
+		router, _ := gosltimetable.NewRouter(slApiMock)
+
+		request := newGetRequest(fmt.Sprintf("/departures/%d", 404))
+		response := httptest.NewRecorder()
+
+		router.ServeHTTP(response, request)
+
+		want := "[]"
+		got := response.Body.String()
+
+		assert.Equal(t, http.StatusOK, response.Code)
+		assert.JSONEq(t, want, got)
+	})
+
+	t.Run("returns 500 on error", func(t *testing.T) {
+		slApiMock, _ := buildSLClientStub(true)
+		router, _ := gosltimetable.NewRouter(slApiMock)
+
+		request := newGetRequest(fmt.Sprintf("/departures/%d", siteIdExists))
+		response := httptest.NewRecorder()
+
+		router.ServeHTTP(response, request)
+
+		assert.Equal(t, http.StatusInternalServerError, response.Code)
+	})
+}
+
+func buildSLClientStub(shouldError bool) (*slApiClientStub, string) {
+	mockDepartures := []sl_api.MappedSLDeparture{
+		{
+			Destination:   "Mock Destination",
+			Display:       "Nu",
+			LineNumber:    123,
+			TransportMode: "BUS",
+			GroupOfLines:  "",
+			State:         "EXPECTED",
+		},
+		{
+			Destination:   "Mock Destination",
+			Display:       "Nu",
+			LineNumber:    123,
+			TransportMode: "BUS",
+			GroupOfLines:  "",
+			State:         "EXPECTED",
+		},
+	}
+	stub := &slApiClientStub{mockDepartures, nil}
+	if shouldError {
+		stub.err = fmt.Errorf("error")
+	}
+	mockDeparturesJson, _ := json.Marshal(mockDepartures)
+
+	return stub, string(mockDeparturesJson)
+
+}
+
+func newGetRequest(path string) *http.Request {
+	req, _ := http.NewRequest(http.MethodGet, path, nil)
+	return req
+}
