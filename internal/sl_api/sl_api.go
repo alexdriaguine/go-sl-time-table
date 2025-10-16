@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alexdriaguine/go-sl-time-table/internal/utils"
@@ -71,8 +72,9 @@ func (s *SLApi) GetSites(searchTerm string) ([]MappedSLSite, error) {
 	}
 
 	mappedSites := mapSites(sites)
+	filteredSites := filterSitesBySearchTerm(mappedSites, searchTerm)
 
-	return mappedSites, nil
+	return filteredSites, nil
 }
 
 func mapSites(sites []SLApiSite) []MappedSLSite {
@@ -84,7 +86,24 @@ func mapSites(sites []SLApiSite) []MappedSLSite {
 		}
 	}
 	return utils.Map(sites, mapSite)
+}
 
+func filterSitesBySearchTerm(sites []MappedSLSite, searchTerm string) []MappedSLSite {
+	filterSite := func(s MappedSLSite) bool {
+
+		nameMatches := strings.Contains(strings.ToLower(s.Name), strings.ToLower(searchTerm))
+		if nameMatches {
+			return true
+		}
+
+		anyAliasMatches := utils.Filter(s.Alias, func(s string) bool {
+			return strings.Contains(strings.ToLower(s), strings.ToLower(searchTerm))
+		})
+
+		return len(anyAliasMatches) > 0
+	}
+
+	return utils.Filter(sites, filterSite)
 }
 
 func mapDepartures(departures []SLApiDeparture) []MappedSLDeparture {

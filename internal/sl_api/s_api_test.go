@@ -54,6 +54,7 @@ func TestSLApi(t *testing.T) {
 	})
 
 	t.Run("can return sites", func(t *testing.T) {
+
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(mockSLSitesResponse))
 		}))
