@@ -11,7 +11,8 @@ import (
 )
 
 type SLClient interface {
-	GetDepartures(siteId int) ([]MappedSLDeparture, error)
+	GetDepartures(int) ([]MappedSLDeparture, error)
+	GetSites(string) ([]MappedSLSite, error)
 }
 
 type SLApi struct {
