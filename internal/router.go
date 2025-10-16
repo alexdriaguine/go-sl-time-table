@@ -34,7 +34,8 @@ func NewRouter(slClient sl_api.SLClient) (*Router, error) {
 	handler := http.NewServeMux()
 
 	handler.Handle("/", http.HandlerFunc(router.handleIndex))
-	handler.Handle("/departures/", http.HandlerFunc(router.handleDepartures))
+	handler.Handle("/api/departures/", http.HandlerFunc(router.handleDepartures))
+	handler.Handle("/api/sites", http.HandlerFunc(router.handleSites))
 	router.Handler = handler
 
 	return router, nil
@@ -64,8 +65,13 @@ func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(&departures)
 }
 
+func (router *Router) handleSites(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("content-type", "application.json")
+	w.WriteHeader(http.StatusOK)
+}
+
 func parseSiteIdFromUrl(url string) (int, error) {
-	siteId, err := strconv.Atoi(strings.Replace(url, "/departures/", "", 1))
+	siteId, err := strconv.Atoi(strings.Replace(url, "/api/departures/", "", 1))
 	if err != nil {
 		return 0, fmt.Errorf("could not parse url %s to siteId, %v", url, err)
 	}

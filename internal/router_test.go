@@ -51,7 +51,7 @@ func TestRouter(t *testing.T) {
 		slApiMock, departuresJson := buildSLClientStub(false)
 		router, _ := gosltimetable.NewRouter(slApiMock)
 
-		request := newGetRequest(fmt.Sprintf("/departures/%d", siteIdExists))
+		request := newGetRequest(fmt.Sprintf("/api/departures/%d", siteIdExists))
 		response := httptest.NewRecorder()
 
 		router.ServeHTTP(response, request)
@@ -67,7 +67,7 @@ func TestRouter(t *testing.T) {
 		slApiMock, _ := buildSLClientStub(false)
 		router, _ := gosltimetable.NewRouter(slApiMock)
 
-		request := newGetRequest(fmt.Sprintf("/departures/%d", 404))
+		request := newGetRequest(fmt.Sprintf("/api/departures/%d", 404))
 		response := httptest.NewRecorder()
 
 		router.ServeHTTP(response, request)
@@ -83,13 +83,26 @@ func TestRouter(t *testing.T) {
 		slApiMock, _ := buildSLClientStub(true)
 		router, _ := gosltimetable.NewRouter(slApiMock)
 
-		request := newGetRequest(fmt.Sprintf("/departures/%d", siteIdExists))
+		request := newGetRequest(fmt.Sprintf("/api/departures/%d", siteIdExists))
 		response := httptest.NewRecorder()
 
 		router.ServeHTTP(response, request)
 
 		assert.Equal(t, http.StatusInternalServerError, response.Code)
 	})
+
+	t.Run("sites endpoint search", func(t *testing.T) {
+		slApiMock, _ := buildSLClientStub(false)
+		router, _ := gosltimetable.NewRouter(slApiMock)
+
+		request := newGetRequest("/api/sites")
+		response := httptest.NewRecorder()
+
+		router.ServeHTTP(response, request)
+
+		assert.Equal(t, http.StatusOK, response.Code)
+	})
+
 }
 
 func buildSLClientStub(shouldError bool) (*slApiClientStub, string) {
