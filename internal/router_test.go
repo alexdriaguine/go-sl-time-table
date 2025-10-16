@@ -19,6 +19,7 @@ var (
 
 type slApiClientStub struct {
 	departures []sl_api.MappedSLDeparture
+	sites      []sl_api.MappedSLSite
 	err        error
 }
 
@@ -30,6 +31,10 @@ func (s *slApiClientStub) GetDepartures(siteid int) ([]sl_api.MappedSLDeparture,
 		return s.departures, nil
 	}
 	return []sl_api.MappedSLDeparture{}, nil
+}
+
+func (s *slApiClientStub) GetSites(searchTerm string) ([]sl_api.MappedSLSite, error) {
+	return s.sites, nil
 }
 
 func TestRouter(t *testing.T) {
@@ -95,12 +100,16 @@ func TestRouter(t *testing.T) {
 		slApiMock, _ := buildSLClientStub(false)
 		router, _ := gosltimetable.NewRouter(slApiMock)
 
-		request := newGetRequest("/api/sites")
+		request := newGetRequest("/api/sites?term=sundby")
 		response := httptest.NewRecorder()
 
 		router.ServeHTTP(response, request)
 
+		want := `[{"Id": 1, "Name": "Sundbyberg", "Alias": ["Sundbybergs centrum"]}]`
+		got := response.Body.String()
+
 		assert.Equal(t, http.StatusOK, response.Code)
+		assert.Equal(t, want, got)
 	})
 
 }
@@ -124,7 +133,12 @@ func buildSLClientStub(shouldError bool) (*slApiClientStub, string) {
 			State:         "EXPECTED",
 		},
 	}
-	stub := &slApiClientStub{mockDepartures, nil}
+
+	mockSites := []sl_api.MappedSLSite{
+		{Id: 1, Name: "Sundbyberg", Alias: []string{"Sundbybergs centrum"}},
+		{Id: 2, Name: "Solna", Alias: []string{"Blåkulla"}},
+	}
+	stub := &slApiClientStub{mockDepartures, mockSites, nil}
 	if shouldError {
 		stub.err = fmt.Errorf("error")
 	}
