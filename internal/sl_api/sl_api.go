@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/alexdriaguine/go-sl-time-table/internal/utils"
 )
 
 type SLClient interface {
@@ -41,30 +43,61 @@ func (s *SLApi) GetDepartures(siteId int) ([]MappedSLDeparture, error) {
 	}
 	defer res.Body.Close()
 
-	var departures SLApiDepartures
-	err = json.NewDecoder(res.Body).Decode(&departures)
+	var d SLApiDepartures
+	err = json.NewDecoder(res.Body).Decode(&d)
 
 	if err != nil {
 		return nil, fmt.Errorf("error decoding json for departures, %v", err)
 	}
 
-	mappedDepartures := mapDepartures(departures)
+	mappedDepartures := mapDepartures(d.Departures)
 	return mappedDepartures, nil
 }
 
-func mapDepartures(d SLApiDepartures) []MappedSLDeparture {
-	mappedDepartures := []MappedSLDeparture{}
+func (s *SLApi) GetSites(searchTerm string) ([]MappedSLSite, error) {
+	res, err := s.httpClient.Get(fmt.Sprintf("%s/sites", s.baseUrl))
 
-	for _, d := range d.Departures {
-		mappedDepartures = append(mappedDepartures, MappedSLDeparture{
+	if err != nil {
+		return nil, fmt.Errorf("error getting sites from sl, %v", err)
+	}
+
+	defer res.Body.Close()
+
+	var sites []SLApiSite
+	err = json.NewDecoder(res.Body).Decode(&sites)
+
+	if err != nil {
+		return nil, fmt.Errorf("error decoding sites to json %v", err)
+	}
+
+	mappedSites := mapSites(sites)
+
+	return mappedSites, nil
+}
+
+func mapSites(sites []SLApiSite) []MappedSLSite {
+	mapSite := func(s SLApiSite) MappedSLSite {
+		return MappedSLSite{
+			Name:  s.Name,
+			Id:    s.ID,
+			Alias: s.Alias,
+		}
+	}
+	return utils.Map(sites, mapSite)
+
+}
+
+func mapDepartures(departures []SLApiDeparture) []MappedSLDeparture {
+
+	mapDeparture := func(d SLApiDeparture) MappedSLDeparture {
+		return MappedSLDeparture{
 			Destination:   d.Destination,
 			Display:       d.Display,
 			LineNumber:    d.Line.ID,
 			TransportMode: d.Line.TransportMode,
 			GroupOfLines:  d.Line.GroupOfLines,
 			State:         d.State,
-		})
+		}
 	}
-
-	return mappedDepartures
+	return utils.Map(departures, mapDeparture)
 }

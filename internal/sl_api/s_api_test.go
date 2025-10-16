@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	"github.com/alexdriaguine/go-sl-time-table/internal/sl_api"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSLApi(t *testing.T) {
 	t.Run("Happy path", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(mockSLResponse))
+			w.Write([]byte(mockSLDeparturesResponse))
 		}))
 
 		slApi := sl_api.NewSLApi(server.Client(), server.URL)
@@ -52,9 +53,82 @@ func TestSLApi(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("can return sites", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(mockSLSitesResponse))
+		}))
+
+		slApi := sl_api.NewSLApi(server.Client(), server.URL)
+
+		got, err := slApi.GetSites("Sundby")
+		want := []sl_api.MappedSLSite{
+			{Name: "Sundbyberg", Id: 9325, Alias: []string{"Sundbybergs centrum", "Sundbybergs station", "Sundbybergs torg"}},
+		}
+		assert.NoError(t, err)
+
+		assert.Equal(t, got, want)
+	})
+
 }
 
-const mockSLResponse = `{
+const mockSLSitesResponse = `[
+  {
+    "id": 9325,
+    "gid": 9091001000009325,
+    "name": "Sundbyberg",
+    "alias": [
+      "Sundbybergs centrum",
+      "Sundbybergs station",
+      "Sundbybergs torg"
+    ],
+    "abbreviation": "SBG",
+    "lat": 59.3608711069539,
+    "lon": 17.9714916630653,
+    "stop_areas": [
+      3431,
+      6031,
+      12346,
+      50242,
+      4543
+    ],
+    "valid": {
+      "from": "2017-10-11T00:00:00"
+    }
+  },
+  {
+    "id": 9326,
+    "gid": 9091001000009326,
+    "name": "Solna strand",
+    "abbreviation": "SSD",
+    "lat": 59.3534977796971,
+    "lon": 17.9743774023631,
+    "stop_areas": [
+      3421,
+      50053
+    ],
+    "valid": {
+      "from": "2014-08-18T00:00:00"
+    }
+  },
+  {
+    "id": 9327,
+    "gid": 9091001000009327,
+    "name": "Huvudsta",
+    "abbreviation": "HUV",
+    "lat": 59.3496499577023,
+    "lon": 17.985420470501,
+    "stop_areas": [
+      3411,
+      12175,
+      50137
+    ],
+    "valid": {
+      "from": "2012-06-23T00:00:00"
+    }
+  }
+]`
+
+const mockSLDeparturesResponse = `{
   "departures": [
     {
       "destination": "Västerhaninge",
