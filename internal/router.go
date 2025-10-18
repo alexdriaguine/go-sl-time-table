@@ -42,12 +42,13 @@ func NewRouter(slClient sl_api.SLClient) (*Router, error) {
 }
 
 func (router *Router) handleIndex(w http.ResponseWriter, r *http.Request) {
-	type indexData struct {
+
+	type IndexViewModel struct {
 		Title   string
 		Heading string
 		Message string
 	}
-	router.templ.ExecuteTemplate(w, "index.gohtml", indexData{Title: "Title!", Heading: "Hello", Message: "hoho"})
+	router.templ.ExecuteTemplate(w, "index.gohtml", IndexViewModel{Title: "Title!", Heading: "Hello", Message: "hoho"})
 }
 
 func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
