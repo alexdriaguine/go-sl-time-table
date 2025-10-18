@@ -2,9 +2,12 @@ package sl_api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,15 +23,16 @@ type TransportType string
 
 // FERRY, SHIP, TAXI also exist but cba
 const (
-	TransportBus    TransportType = "BUS"
-	TransportTram   TransportType = "TRAM"
-	TranpsportMetro TransportType = "METRO"
-	TransportTrain  TransportType = "TRAIN"
+	TransportBus   TransportType = "BUS"
+	TransportTram  TransportType = "TRAM"
+	TransportMetro TransportType = "METRO"
+	TransportTrain TransportType = "TRAIN"
+	TransportEmpty TransportType = ""
 )
 
 func isValidTransportType(t TransportType) bool {
 	switch t {
-	case TransportBus, TransportTrain, TranpsportMetro, TransportTram:
+	case TransportBus, TransportTrain, TransportMetro, TransportTram, TransportEmpty:
 		return true
 	default:
 		return false
@@ -86,19 +90,40 @@ func NewDefaultSLApi() *SLApi {
 
 const departuresCacheTiime = 5 * time.Second
 
+var errInvalidTransportType = errors.New("invalid transport-type")
+
 func (s *SLApi) GetDepartures(args GetDeparturesArgs) ([]MappedSLDeparture, error) {
 
-	cacheKey := fmt.Sprintf("%d-site", args.SiteId)
+	if !isValidTransportType(args.Transport) {
+		return nil, fmt.Errorf("could not parse transport %s, %w", args.Transport, errInvalidTransportType)
+	}
+
+	cacheKey := buildCacheKey(args)
+	fmt.Println("cache key")
+	fmt.Println(cacheKey)
 	cached, found := s.departuresCache.Get(cacheKey)
 
 	if found {
 		return cached, nil
 	}
 
-	res, err := s.httpClient.Get(fmt.Sprintf("%s/sites/%d/departures", s.baseUrl, args.SiteId))
+	params := url.Values{}
+	if args.Transport != TransportEmpty {
+		params.Add("transport", string(args.Transport))
+	}
+	if args.Line != 0 {
+		params.Add("line", strconv.Itoa(args.Line))
+	}
+	if args.Direction > 0 && args.Direction <= 2 {
+		params.Add("direction", strconv.Itoa(args.Direction))
+	}
+
+	queryString := params.Encode()
+
+	res, err := s.httpClient.Get(fmt.Sprintf("%s/sites/%d/departures?%s", s.baseUrl, args.SiteId, queryString))
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting departures from sl, %v", err)
+		return nil, fmt.Errorf("error getting departures from sl, %w", err)
 	}
 	defer res.Body.Close()
 
@@ -106,13 +131,24 @@ func (s *SLApi) GetDepartures(args GetDeparturesArgs) ([]MappedSLDeparture, erro
 	err = json.NewDecoder(res.Body).Decode(&d)
 
 	if err != nil {
-		return nil, fmt.Errorf("error decoding json for departures, %v", err)
+		return nil, fmt.Errorf("error decoding json for departures, %w", err)
 	}
 
 	mappedDepartures := mapDepartures(d.Departures)
 	s.departuresCache.Set(cacheKey, mappedDepartures, departuresCacheTiime)
 
 	return mappedDepartures, nil
+}
+
+func buildCacheKey(args GetDeparturesArgs) string {
+	key := fmt.Sprintf(
+		"sites-%d-%d-%d-%s",
+		args.SiteId,
+		args.Line,
+		args.Direction,
+		args.Transport,
+	)
+	return key
 }
 
 const sitesCacheKey = "sites"
@@ -129,7 +165,7 @@ func (s *SLApi) GetSites(searchTerm string) ([]MappedSLSite, error) {
 	res, err := s.httpClient.Get(fmt.Sprintf("%s/sites", s.baseUrl))
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting sites from sl, %v", err)
+		return nil, fmt.Errorf("error getting sites from sl, %w", err)
 	}
 
 	defer res.Body.Close()
@@ -138,7 +174,7 @@ func (s *SLApi) GetSites(searchTerm string) ([]MappedSLSite, error) {
 	err = json.NewDecoder(res.Body).Decode(&sites)
 
 	if err != nil {
-		return nil, fmt.Errorf("error decoding sites to json %v", err)
+		return nil, fmt.Errorf("error decoding sites to json %w", err)
 	}
 
 	mappedSites := mapSites(sites)

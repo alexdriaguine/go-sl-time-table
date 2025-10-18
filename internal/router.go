@@ -26,7 +26,7 @@ func NewRouter(slClient sl_api.SLClient) (*Router, error) {
 	templ, err := template.ParseFS(templates, "templates/*.gohtml")
 
 	if err != nil {
-		return nil, fmt.Errorf("error parsing templates %v", err)
+		return nil, fmt.Errorf("error parsing templates %w", err)
 	}
 
 	router := &Router{templ: templ}
@@ -55,13 +55,24 @@ func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("content-type", "application/json")
 	siteId, _ := parseSiteIdFromUrl(r.URL.Path)
+	line, _ := strconv.Atoi(r.URL.Query().Get("line"))
+	transport := r.URL.Query().Get("transport")
+	direction, _ := strconv.Atoi(r.URL.Query().Get("direction"))
 
-	departures, err := router.slClient.GetDepartures(sl_api.GetDeparturesArgs{SiteId: siteId})
+	args := sl_api.GetDeparturesArgs{
+		SiteId:    siteId,
+		Line:      line,
+		Transport: sl_api.TransportType(transport),
+		Direction: direction,
+	}
+
+	departures, err := router.slClient.GetDepartures(args)
 
 	if err != nil {
 		log.Printf("error getting departures from sl, %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(struct{ Message string }{Message: "Internal Server ERror"})
+		return
 	}
 
 	json.NewEncoder(w).Encode(&departures)
@@ -86,7 +97,7 @@ func (router *Router) handleSites(w http.ResponseWriter, r *http.Request) {
 func parseSiteIdFromUrl(url string) (int, error) {
 	siteId, err := strconv.Atoi(strings.Replace(url, "/api/departures/", "", 1))
 	if err != nil {
-		return 0, fmt.Errorf("could not parse url %s to siteId, %v", url, err)
+		return 0, fmt.Errorf("could not parse url %s to siteId, %w", url, err)
 	}
 	return siteId, nil
 }

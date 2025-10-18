@@ -62,10 +62,30 @@ func TestSLApi(t *testing.T) {
 
 		got, err := slApi.GetSites("Sundby")
 		want := []sl_api.MappedSLSite{
-			{Name: "Sundbyberg", Id: 9325, Alias: []string{"Sundbybergs centrum", "Sundbybergs station", "Sundbybergs torg"}},
+			{
+				Name: "Sundbyberg",
+				Id:   9325,
+				Alias: []string{
+					"Sundbybergs centrum",
+					"Sundbybergs station",
+					"Sundbybergs torg",
+				},
+			},
 		}
 		assert.NoError(t, err)
 		assert.Equal(t, got, want)
+	})
+
+	t.Run("incorrect transport type returns error", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(mockSLDeparturesResponse))
+		}))
+
+		slApi := sl_api.NewSLApi(server.Client(), server.URL)
+
+		_, err := slApi.GetDepartures(sl_api.GetDeparturesArgs{SiteId: 9325, Transport: "rocket"})
+
+		assert.Error(t, err)
 	})
 
 }
