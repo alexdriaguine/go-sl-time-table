@@ -73,16 +73,30 @@ func TestCache(t *testing.T) {
 
 		times := 1000
 
-		wg.Add(times)
+		wg.Add(times * 2)
 
 		for i := range times {
 			go func(i int) {
 				cache.Set(fmt.Sprintf("key-%d", i), i, 10*time.Minute)
 				wg.Done()
 			}(i)
+			go func(i int) {
+				cache.Get(fmt.Sprintf("key-%d", i))
+				wg.Done()
+			}(i)
 		}
 
 		wg.Wait()
-	})
+		assert.Equal(t, len(cache.store), times)
 
+		wg.Add(times)
+		for i := range times {
+			go func(i int) {
+				item, found := cache.Get(fmt.Sprintf("key-%d", i))
+				assert.True(t, found)
+				assert.Equal(t, item, i)
+				wg.Done()
+			}(i)
+		}
+	})
 }
