@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,7 +43,7 @@ func TestCache(t *testing.T) {
 
 	t.Run("ttl works", func(t *testing.T) {
 		clock := NewStubClock()
-		cache := &Cache[string, int]{map[string]CacheValue[int]{}, clock}
+		cache := &InMemoryCache[string, int]{map[string]CacheValue[int]{}, clock, sync.RWMutex{}}
 		key := "hello"
 		val := 12
 
@@ -62,6 +64,25 @@ func TestCache(t *testing.T) {
 		_, found = cache.Get(key)
 		assert.False(t, found)
 		assert.Equal(t, len(cache.store), 0)
+	})
+
+	t.Run("test concurrent writes", func(t *testing.T) {
+		cache := NewCache[string, int]()
+
+		var wg sync.WaitGroup
+
+		times := 1000
+
+		wg.Add(times)
+
+		for i := range times {
+			go func(i int) {
+				cache.Set(fmt.Sprintf("key-%d", i), i, 10*time.Minute)
+				wg.Done()
+			}(i)
+		}
+
+		wg.Wait()
 	})
 
 }

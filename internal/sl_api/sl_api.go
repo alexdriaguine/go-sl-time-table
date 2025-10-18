@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alexdriaguine/go-sl-time-table/internal/cache"
 	"github.com/alexdriaguine/go-sl-time-table/internal/utils"
 )
 
@@ -16,16 +17,20 @@ type SLClient interface {
 }
 
 type SLApi struct {
-	httpClient *http.Client
-	baseUrl    string
+	httpClient      *http.Client
+	baseUrl         string
+	sitesCache      cache.Cacher[string, []MappedSLSite]
+	departuresCache cache.Cacher[int, []MappedSLDeparture]
 }
 
 // Ensure implementing interface
 var _ SLClient = (*SLApi)(nil)
 
 func NewSLApi(httpClient *http.Client, baseUrl string) *SLApi {
-	fmt.Println(baseUrl)
-	return &SLApi{httpClient, baseUrl}
+	sitesCache := cache.NewCache[string, []MappedSLSite]()
+	departuresCache := cache.NewCache[int, []MappedSLDeparture]()
+
+	return &SLApi{httpClient, baseUrl, sitesCache, departuresCache}
 }
 
 func NewDefaultSLApi() *SLApi {
