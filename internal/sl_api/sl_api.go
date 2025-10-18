@@ -80,10 +80,13 @@ func (s *SLApi) GetSites(searchTerm string) ([]MappedSLSite, error) {
 
 func mapSites(sites []SLApiSite) []MappedSLSite {
 	mapSite := func(s SLApiSite) MappedSLSite {
+
 		return MappedSLSite{
-			Name:  s.Name,
-			Id:    s.ID,
-			Alias: s.Alias,
+			Name: s.Name,
+			Id:   s.ID,
+			// copies the slice in to an empty slice, to avoid having
+			// null values in the json response
+			Alias: append([]string{}, s.Alias...),
 		}
 	}
 	return utils.Map(sites, mapSite)
