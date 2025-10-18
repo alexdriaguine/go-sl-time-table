@@ -12,8 +12,39 @@ import (
 	"github.com/alexdriaguine/go-sl-time-table/internal/utils"
 )
 
+// BUS, TRAM, METRO, TRAIN,
+// direction 1 or 2
+// line (number)
+// forecast
+type TransportType string
+
+// FERRY, SHIP, TAXI also exist but cba
+const (
+	TransportBus    TransportType = "BUS"
+	TransportTram   TransportType = "TRAM"
+	TranpsportMetro TransportType = "METRO"
+	TransportTrain  TransportType = "TRAIN"
+)
+
+func isValidTransportType(t TransportType) bool {
+	switch t {
+	case TransportBus, TransportTrain, TranpsportMetro, TransportTram:
+		return true
+	default:
+		return false
+	}
+}
+
+type Direction int
+
+type GetDeparturesArgs struct {
+	SiteId    int
+	Line      int
+	Direction int
+	Transport TransportType
+}
 type SLClient interface {
-	GetDepartures(int) ([]MappedSLDeparture, error)
+	GetDepartures(GetDeparturesArgs) ([]MappedSLDeparture, error)
 	GetSites(string) ([]MappedSLSite, error)
 }
 
@@ -55,16 +86,16 @@ func NewDefaultSLApi() *SLApi {
 
 const departuresCacheTiime = 5 * time.Second
 
-func (s *SLApi) GetDepartures(siteId int) ([]MappedSLDeparture, error) {
+func (s *SLApi) GetDepartures(args GetDeparturesArgs) ([]MappedSLDeparture, error) {
 
-	cacheKey := fmt.Sprintf("%d-site", siteId)
+	cacheKey := fmt.Sprintf("%d-site", args.SiteId)
 	cached, found := s.departuresCache.Get(cacheKey)
 
 	if found {
 		return cached, nil
 	}
 
-	res, err := s.httpClient.Get(fmt.Sprintf("%s/sites/%d/departures", s.baseUrl, siteId))
+	res, err := s.httpClient.Get(fmt.Sprintf("%s/sites/%d/departures", s.baseUrl, args.SiteId))
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting departures from sl, %v", err)

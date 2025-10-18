@@ -18,7 +18,7 @@ func TestSLApi(t *testing.T) {
 
 		slApi := sl_api.NewSLApi(server.Client(), server.URL)
 
-		got, err := slApi.GetDepartures(123)
+		got, err := slApi.GetDepartures(sl_api.GetDeparturesArgs{SiteId: 9325})
 		require.NoError(t, err)
 		want := []sl_api.MappedSLDeparture{
 			{
@@ -49,7 +49,7 @@ func TestSLApi(t *testing.T) {
 
 		slApi := sl_api.NewSLApi(server.Client(), server.URL)
 
-		_, err := slApi.GetDepartures(123)
+		_, err := slApi.GetDepartures(sl_api.GetDeparturesArgs{SiteId: 9325})
 		require.Error(t, err)
 	})
 

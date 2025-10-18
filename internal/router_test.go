@@ -22,11 +22,11 @@ type slApiClientStub struct {
 	err        error
 }
 
-func (s *slApiClientStub) GetDepartures(siteid int) ([]sl_api.MappedSLDeparture, error) {
+func (s *slApiClientStub) GetDepartures(args sl_api.GetDeparturesArgs) ([]sl_api.MappedSLDeparture, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
-	if siteid == siteIdExists {
+	if args.SiteId == siteIdExists {
 		return s.departures, nil
 	}
 	return []sl_api.MappedSLDeparture{}, nil

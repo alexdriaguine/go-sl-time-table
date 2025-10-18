@@ -52,10 +52,11 @@ func (router *Router) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
+
 	w.Header().Add("content-type", "application/json")
 	siteId, _ := parseSiteIdFromUrl(r.URL.Path)
 
-	departures, err := router.slClient.GetDepartures(siteId)
+	departures, err := router.slClient.GetDepartures(sl_api.GetDeparturesArgs{SiteId: siteId})
 
 	if err != nil {
 		log.Printf("error getting departures from sl, %v", err)
