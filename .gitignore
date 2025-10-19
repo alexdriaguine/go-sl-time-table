@@ -10,6 +10,7 @@
 # But not these files...
 !/.gitignore
 !/.editorconfig
+!.gitkeep
 
 !*.go
 !go.sum
@@ -28,8 +29,9 @@
 # npm shit
 # some sub dirs in .pnpm wanted to go with us otherwise
 node_modules
-!package.json
-!pnpm-lock.yaml
-!vite.config.ts
-!tsconfig.json
-!index.html
+
+!/package.json
+!/pnpm-lock.yaml
+!/vite.config.ts
+!/tsconfig.json
+!/index.html

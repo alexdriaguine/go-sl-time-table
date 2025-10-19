@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -30,22 +31,26 @@ type Router struct {
 
 func NewRouter(slClient sl_api.SLClient) (*Router, error) {
 
-	staticFs, err := fs.Sub(staticFiles, "static")
-
-	if err != nil {
-		return nil, fmt.Errorf("error parsing static files %w", err)
-	}
+	isDev := os.Getenv("IS_DEV") == "true"
 
 	router := &Router{}
 	router.slClient = slClient
 	handler := http.NewServeMux()
 
-	// creates a http filesystem, for use in a http server
-	fileServer := http.FileServerFS(staticFs)
+	if !isDev {
+		// creats a sub fs from our embedded "static/*" folder, with
+		// the "static" folder as root
+		staticFs, err := fs.Sub(staticFiles, "static")
+		if err != nil {
+			return nil, fmt.Errorf("error parsing static files %w", err)
+		}
 
-	// fs.Sub makes "static" folder our root so need to strip it from the
-	// path
-	handler.Handle("/static/", http.StripPrefix("/static/", fileServer))
+		// converts our filesustem to a http handler
+		fileServer := http.FileServerFS(staticFs)
+
+		handler.Handle("/", fileServer)
+
+	}
 
 	handler.Handle("/api/departures/", http.HandlerFunc(router.handleDepartures))
 	handler.Handle("/api/sites", http.HandlerFunc(router.handleSites))
@@ -117,7 +122,11 @@ func (router *Router) handleSites(w http.ResponseWriter, r *http.Request) {
 	}
 
 	matchingSites, _ := router.slClient.GetSites(searchTerm)
-	json.NewEncoder(w).Encode(matchingSites[:5])
+
+	if len(matchingSites) > 5 {
+		matchingSites = matchingSites[:5]
+	}
+	json.NewEncoder(w).Encode(matchingSites)
 }
 
 func parseLineFromQuery(url *url.URL) (int, error) {

@@ -1,7 +1,7 @@
 build:
-	go build -o bin/sl-sime-table ./cmd/webserver/main.go
+	pnpm build && go build -o bin/sl-sime-table ./cmd/webserver/main.go
 run:
-	go run ./cmd/webserver/main.go
+	IS_DEV=true go run ./cmd/webserver/main.go
 test:
 	go test ./...
 test-race:
