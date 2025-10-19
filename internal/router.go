@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 
 	"github.com/alexdriaguine/go-sl-time-table/internal/sl_api"
 )
@@ -130,14 +131,14 @@ func (router *Router) handleSites(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
 	searchTerm := r.URL.Query().Get("term")
 
-	if len(searchTerm) < 3 {
+	if utf8.RuneCountInString(searchTerm) < 2 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Message: "3 or more characters needed for search"})
+		json.NewEncoder(w).Encode(ErrorResponse{Message: "2 or more characters needed for search"})
 		return
 	}
 
 	matchingSites, _ := router.slClient.GetSites(searchTerm)
-	json.NewEncoder(w).Encode(matchingSites)
+	json.NewEncoder(w).Encode(matchingSites[:5])
 }
 
 func parseLineFromQuery(url *url.URL) (int, error) {
