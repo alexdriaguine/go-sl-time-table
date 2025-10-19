@@ -18,6 +18,9 @@
 !*.ts
 !*.tsx
 
+# ignore built
+bin/
+
 !README.md
 !LICENSE
 
@@ -34,4 +37,4 @@ node_modules
 !/pnpm-lock.yaml
 !/vite.config.ts
 !/tsconfig.json
-!/index.html
+!client/index.html

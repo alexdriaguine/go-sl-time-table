@@ -6,6 +6,9 @@ export default defineConfig({
 	build: {
 		outDir: "internal/static",
 		emptyOutDir: true,
+		rollupOptions: {
+			input: "src/index.html",
+		},
 	},
 	server: {
 		port: 3014,
