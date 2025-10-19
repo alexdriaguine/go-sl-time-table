@@ -11,14 +11,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"text/template"
 	"unicode/utf8"
 
 	"github.com/alexdriaguine/go-sl-time-table/internal/sl_api"
 )
-
-//go:embed "templates/*"
-var templates embed.FS
 
 //go:embed "static/*"
 var staticFiles embed.FS
@@ -29,16 +25,10 @@ type ErrorResponse struct {
 
 type Router struct {
 	http.Handler
-	templ    *template.Template
 	slClient sl_api.SLClient
 }
 
 func NewRouter(slClient sl_api.SLClient) (*Router, error) {
-	templ, err := template.ParseFS(templates, "templates/*.gohtml")
-
-	if err != nil {
-		return nil, fmt.Errorf("error parsing templates %w", err)
-	}
 
 	staticFs, err := fs.Sub(staticFiles, "static")
 
@@ -46,7 +36,7 @@ func NewRouter(slClient sl_api.SLClient) (*Router, error) {
 		return nil, fmt.Errorf("error parsing static files %w", err)
 	}
 
-	router := &Router{templ: templ}
+	router := &Router{}
 	router.slClient = slClient
 	handler := http.NewServeMux()
 
@@ -57,22 +47,11 @@ func NewRouter(slClient sl_api.SLClient) (*Router, error) {
 	// path
 	handler.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
-	handler.Handle("/", http.HandlerFunc(router.handleIndex))
 	handler.Handle("/api/departures/", http.HandlerFunc(router.handleDepartures))
 	handler.Handle("/api/sites", http.HandlerFunc(router.handleSites))
 	router.Handler = handler
 
 	return router, nil
-}
-
-func (router *Router) handleIndex(w http.ResponseWriter, r *http.Request) {
-
-	type IndexViewModel struct {
-		Title   string
-		Heading string
-		Message string
-	}
-	router.templ.ExecuteTemplate(w, "index.gohtml", IndexViewModel{Title: "Title!", Heading: "Hello", Message: "hoho"})
 }
 
 func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {

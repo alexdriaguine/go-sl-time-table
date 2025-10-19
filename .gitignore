@@ -14,6 +14,8 @@
 !*.go
 !go.sum
 !go.mod
+!*.ts
+!*.tsx
 
 !README.md
 !LICENSE
@@ -28,3 +30,6 @@
 node_modules
 !package.json
 !pnpm-lock.yaml
+!vite.config.ts
+!tsconfig.json
+!index.html
