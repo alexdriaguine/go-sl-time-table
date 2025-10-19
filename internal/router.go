@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -17,6 +18,9 @@ import (
 
 //go:embed "templates/*"
 var templates embed.FS
+
+//go:embed "static/*"
+var staticFiles embed.FS
 
 type ErrorResponse struct {
 	Message string
@@ -35,9 +39,22 @@ func NewRouter(slClient sl_api.SLClient) (*Router, error) {
 		return nil, fmt.Errorf("error parsing templates %w", err)
 	}
 
+	staticFs, err := fs.Sub(staticFiles, "static")
+
+	if err != nil {
+		return nil, fmt.Errorf("error parsing static files %w", err)
+	}
+
 	router := &Router{templ: templ}
 	router.slClient = slClient
 	handler := http.NewServeMux()
+
+	// creates a http filesystem, for use in a http server
+	fileServer := http.FileServerFS(staticFs)
+
+	// fs.Sub makes "static" folder our root so need to strip it from the
+	// path
+	handler.Handle("/static/", http.StripPrefix("/static/", fileServer))
 
 	handler.Handle("/", http.HandlerFunc(router.handleIndex))
 	handler.Handle("/api/departures/", http.HandlerFunc(router.handleDepartures))
@@ -59,9 +76,11 @@ func (router *Router) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("content-type", "application/json")
+
 	siteId, siteIdErr := parseSiteIdFromUrl(r.URL)
 	line, lineErr := parseLineFromQuery(r.URL)
 	direction, directionErr := parseDirectionFromQuery(r.URL)
+	transport := strings.ToUpper(r.URL.Query().Get("transport"))
 
 	if siteIdErr != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -80,7 +99,6 @@ func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(ErrorResponse{Message: directionErr.Error()})
 		return
 	}
-	transport := strings.ToUpper(r.URL.Query().Get("transport"))
 
 	args := sl_api.GetDeparturesArgs{
 		SiteId:    siteId,
@@ -93,17 +111,19 @@ func (router *Router) handleDepartures(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("error getting departures from sl, %v", err)
+
 		if errors.Is(err, sl_api.ErrInvalidTransportType) {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(ErrorResponse{Message: err.Error()})
 			return
 		}
+
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(ErrorResponse{Message: "Internal Server Error"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(&departures)
+	json.NewEncoder(w).Encode(departures)
 }
 
 func (router *Router) handleSites(w http.ResponseWriter, r *http.Request) {
@@ -122,11 +142,13 @@ func (router *Router) handleSites(w http.ResponseWriter, r *http.Request) {
 
 func parseLineFromQuery(url *url.URL) (int, error) {
 	queryLine := url.Query().Get("line")
+
 	if queryLine == "" {
 		return 0, nil
 	}
 
 	line, err := strconv.Atoi(queryLine)
+
 	if err != nil {
 		return 0, fmt.Errorf("could not parse line from value %s, %w", queryLine, err)
 	}
@@ -136,6 +158,7 @@ func parseLineFromQuery(url *url.URL) (int, error) {
 
 func parseDirectionFromQuery(url *url.URL) (int, error) {
 	queryDirection := url.Query().Get("direction")
+
 	if queryDirection == "" {
 		return 0, nil
 	}
@@ -151,8 +174,10 @@ func parseDirectionFromQuery(url *url.URL) (int, error) {
 
 func parseSiteIdFromUrl(url *url.URL) (int, error) {
 	siteId, err := strconv.Atoi(strings.Replace(url.Path, "/api/departures/", "", 1))
+
 	if err != nil {
 		return 0, fmt.Errorf("could not parse url %s to siteId, %w", url, err)
 	}
+
 	return siteId, nil
 }
