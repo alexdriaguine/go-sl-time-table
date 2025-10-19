@@ -70,7 +70,29 @@ func TestRouter(t *testing.T) {
 		assert.JSONEq(t, want, got)
 	})
 
-	t.Run("returns 500 on error", func(t *testing.T) {
+	t.Run("departures with unparseable siteId returns bad request", func(t *testing.T) {
+		slApiMock, _ := buildSLClientStub(false)
+		router, _ := gosltimetable.NewRouter(slApiMock)
+
+		request := newGetRequest("/api/departures/not-a-site-id")
+		response := httptest.NewRecorder()
+
+		router.ServeHTTP(response, request)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+	})
+
+	t.Run("departures with unparseable line returns bad request", func(t *testing.T) {
+		slApiMock, _ := buildSLClientStub(false)
+		router, _ := gosltimetable.NewRouter(slApiMock)
+
+		request := newGetRequest(fmt.Sprintf("/api/departures/%d?line=gröna", siteIdExists))
+		response := httptest.NewRecorder()
+
+		router.ServeHTTP(response, request)
+		assert.Equal(t, http.StatusBadRequest, response.Code)
+	})
+
+	t.Run("returns 500 on sl api error", func(t *testing.T) {
 		slApiMock, _ := buildSLClientStub(true)
 		router, _ := gosltimetable.NewRouter(slApiMock)
 

@@ -90,12 +90,12 @@ func NewDefaultSLApi() *SLApi {
 
 const departuresCacheTiime = 5 * time.Second
 
-var errInvalidTransportType = errors.New("invalid transport-type")
+var ErrInvalidTransportType = errors.New("invalid transport-type")
 
 func (s *SLApi) GetDepartures(args GetDeparturesArgs) ([]MappedSLDeparture, error) {
 
 	if !isValidTransportType(args.Transport) {
-		return nil, fmt.Errorf("could not parse transport %s, %w", args.Transport, errInvalidTransportType)
+		return nil, fmt.Errorf("could not parse transport %s, %w", args.Transport, ErrInvalidTransportType)
 	}
 
 	cacheKey := buildCacheKey(args)
