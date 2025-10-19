@@ -9,6 +9,7 @@
 
 # But not these files...
 !/.gitignore
+!/.editorconfig
 
 !*.go
 !go.sum
@@ -21,3 +22,9 @@
 
 # ...even if they are in subdirectories
 !*/
+
+# npm shit
+# some sub dirs in .pnpm wanted to go with us otherwise
+node_modules
+!package.json
+!pnpm-lock.yaml
